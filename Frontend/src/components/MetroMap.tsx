@@ -108,29 +108,28 @@ function MapClickHandler({
   return null;
 }
 
-// Renders GeoJSON track collection with per-feature styling
+// Renders track collection with dotted green style
+// Coordinates stored as [lat, lng], Leaflet L.polyline expects same format
 function TrackRenderer({ tracks }: { tracks: TrackCollection }) {
   const map = useMap();
 
   useEffect(() => {
-    const geojson = L.geoJSON(tracks as unknown as GeoJSON.GeoJSON, {
-      style: (feature) => {
-        const props = feature?.properties;
-        const isSplit = props?.name?.includes("Split");
-        return {
-          color: props?.color || "#E53935",
-          weight: isSplit ? 3 : 5,
-          opacity: isSplit ? 0.65 : 0.85,
-          dashArray: isSplit ? "6 8" : undefined,
-        };
-      },
-      onEachFeature: (feature, layer) => {
-        layer.bindPopup(`<b>${feature.properties.name}</b>`);
-      },
-    }).addTo(map);
+    const layers: L.Polyline[] = [];
+
+    tracks.features.forEach((feature) => {
+      const coords = feature.geometry.coordinates as [number, number][];
+      const polyline = L.polyline(coords, {
+        color: "#00E676",
+        weight: 4,
+        opacity: 0.8,
+        dashArray: "8 6",
+      }).addTo(map);
+      polyline.bindPopup(`<b>${feature.properties.name}</b>`);
+      layers.push(polyline);
+    });
 
     return () => {
-      map.removeLayer(geojson);
+      layers.forEach((l) => map.removeLayer(l));
     };
   }, [map, tracks]);
 
