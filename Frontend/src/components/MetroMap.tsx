@@ -141,6 +141,7 @@ interface MetroMapProps {
   selectedSighting: MetroSighting | null;
   stations: MetroStation[];
   tracks: TrackCollection;
+  returnTracks?: TrackCollection;
   lineColor: string;
   onSelectSighting: (sighting: MetroSighting | null) => void;
   onFlagAtPosition: (lat: number, lng: number) => void;
@@ -152,6 +153,7 @@ export default function MetroMap({
   selectedSighting,
   stations,
   tracks,
+  returnTracks,
   lineColor,
   onSelectSighting,
   onFlagAtPosition,
@@ -179,6 +181,7 @@ export default function MetroMap({
 
         {/* Ground-level rail tracks */}
         <TrackRenderer tracks={tracks} />
+        {returnTracks && <TrackRenderer tracks={returnTracks} />}
 
         {/* Station markers */}
         {stations.map((station) => (

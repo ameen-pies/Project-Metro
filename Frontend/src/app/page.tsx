@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
 import FlagModal from "@/components/FlagModal";
-import { MetroSighting, METRO_LINES, LINE4_STATIONS, LINE4_TRACKS } from "@/lib/types";
+import { MetroSighting, METRO_LINES, LINE4_STATIONS, LINE4_TRACKS, LINE4_RETURN_TRACKS } from "@/lib/types";
 import { MOCK_SIGHTINGS } from "@/lib/store";
 
 const MetroMap = dynamic(() => import("@/components/MetroMap"), {
@@ -168,6 +168,7 @@ export default function Home() {
           selectedSighting={selectedSighting}
           stations={stations}
           tracks={LINE4_TRACKS}
+          returnTracks={LINE4_RETURN_TRACKS}
           lineColor={currentLineData?.color || "#E3000B"}
           onSelectSighting={setSelectedSighting}
           onFlagAtPosition={handleFlagAtPosition}
