@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
 import FlagModal from "@/components/FlagModal";
-import { MetroSighting } from "@/lib/types";
+import { MetroSighting, METRO_LINES, LINE4_STATIONS } from "@/lib/types";
 import { MOCK_SIGHTINGS } from "@/lib/store";
 
 const MetroMap = dynamic(() => import("@/components/MetroMap"), {
@@ -21,23 +21,43 @@ const MetroMap = dynamic(() => import("@/components/MetroMap"), {
 
 export default function Home() {
   const [sightings, setSightings] = useState<MetroSighting[]>(MOCK_SIGHTINGS);
-  const [selectedSighting, setSelectedSighting] = useState<MetroSighting | null>(null);
+  const [selectedSighting, setSelectedSighting] =
+    useState<MetroSighting | null>(null);
+  const [currentLine, setCurrentLine] = useState("Line 4");
   const [flagModalOpen, setFlagModalOpen] = useState(false);
-  const [flagPosition, setFlagPosition] = useState<[number, number] | null>(null);
-  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
+  const [flagPosition, setFlagPosition] = useState<[number, number] | null>(
+    null
+  );
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+
+  const currentLineData = METRO_LINES.find((l) => l.name === currentLine);
+  const isAvailable = currentLineData?.available ?? false;
+
+  // Route polyline for Line 4
+  const routeLine: [number, number][] = useMemo(
+    () => LINE4_STATIONS.map((s) => s.position),
+    []
+  );
+
+  const stations = LINE4_STATIONS; // expand when more lines added
 
   const handleFlagNew = useCallback(() => {
-    // Use a random position near Paris center for demo
-    const lat = 48.8566 + (Math.random() - 0.5) * 0.02;
-    const lng = 2.3522 + (Math.random() - 0.5) * 0.02;
+    // Use Line 4 Tunis Marine area as default
+    const basePos = LINE4_STATIONS[0].position;
+    const lat = basePos[0] + (Math.random() - 0.5) * 0.01;
+    const lng = basePos[1] + (Math.random() - 0.5) * 0.01;
     setFlagPosition([lat, lng]);
     setFlagModalOpen(true);
   }, []);
 
-  const handleFlagAtPosition = useCallback((lat: number, lng: number) => {
-    setFlagPosition([lat, lng]);
-    setFlagModalOpen(true);
-  }, []);
+  const handleFlagAtPosition = useCallback(
+    (lat: number, lng: number) => {
+      if (!isAvailable) return;
+      setFlagPosition([lat, lng]);
+      setFlagModalOpen(true);
+    },
+    [isAvailable]
+  );
 
   const handleSubmitSighting = useCallback(
     (newSighting: Omit<MetroSighting, "id" | "confirmations">) => {
@@ -52,6 +72,11 @@ export default function Home() {
     []
   );
 
+  const handleSwitchLine = useCallback((lineName: string) => {
+    setCurrentLine(lineName);
+    setSelectedSighting(null);
+  }, []);
+
   return (
     <div className="h-screen w-screen flex overflow-hidden">
       {/* Sidebar - Desktop */}
@@ -59,19 +84,25 @@ export default function Home() {
         <Sidebar
           sightings={sightings}
           selectedSighting={selectedSighting}
+          currentLine={currentLine}
           onSelectSighting={setSelectedSighting}
           onFlagNew={handleFlagNew}
+          onSwitchLine={handleSwitchLine}
         />
       </div>
 
       {/* Mobile sidebar overlay */}
       {showMobileSidebar && (
         <div className="md:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileSidebar(false)} />
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowMobileSidebar(false)}
+          />
           <div className="absolute left-0 top-0 bottom-0 w-[85vw] max-w-[380px]">
             <Sidebar
               sightings={sightings}
               selectedSighting={selectedSighting}
+              currentLine={currentLine}
               onSelectSighting={(s) => {
                 setSelectedSighting(s);
                 setShowMobileSidebar(false);
@@ -80,6 +111,7 @@ export default function Home() {
                 handleFlagNew();
                 setShowMobileSidebar(false);
               }}
+              onSwitchLine={handleSwitchLine}
             />
           </div>
         </div>
@@ -87,27 +119,48 @@ export default function Home() {
 
       {/* Map area */}
       <div className="flex-1 relative">
-        {/* Mobile menu button */}
-        <button
-          onClick={() => setShowMobileSidebar(true)}
-          className="md:hidden absolute top-4 left-4 z-30 w-10 h-10 rounded-2xl bg-metro-surface border border-metro-border flex items-center justify-center shadow-lg"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M2 4h14M2 9h14M2 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        </button>
+        {/* Top bar */}
+        <div className="absolute top-4 left-4 right-4 z-30 flex items-center justify-between gap-3">
+          <button
+            onClick={() => setShowMobileSidebar(true)}
+            className="md:hidden w-10 h-10 rounded-2xl bg-metro-surface border border-metro-border flex items-center justify-center shadow-lg"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path
+                d="M2 4h14M2 9h14M2 14h14"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
 
-        {/* Stats bar */}
-        <div className="absolute top-4 right-4 z-30 flex items-center gap-2">
-          <div className="px-3 py-1.5 bg-metro-surface/90 backdrop-blur-sm border border-metro-border rounded-xl text-xs text-metro-muted">
-            <span className="text-metro-cyan font-semibold">{sightings.length}</span> active
+          {/* Line indicator */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-metro-surface/90 backdrop-blur-sm border border-metro-border rounded-xl">
+            <div
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ background: currentLineData?.color || "#E3000B" }}
+            />
+            <span className="text-xs font-medium text-metro-text">
+              {currentLine}
+            </span>
+            <span className="text-xs text-metro-muted">
+              · {filteredCount(sightings, currentLine)} active
+            </span>
           </div>
+
           <button
             onClick={handleFlagNew}
-            className="md:hidden flex items-center gap-1.5 px-3 py-1.5 bg-metro-cyan text-metro-bg text-xs font-semibold rounded-xl"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-metro-bg text-xs font-semibold rounded-xl"
+            style={{ background: currentLineData?.color || "#E3000B" }}
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="M8 3v10M3 8h10"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
             Flag
           </button>
@@ -115,10 +168,14 @@ export default function Home() {
 
         {/* Map */}
         <MetroMap
-          sightings={sightings}
+          sightings={sightings.filter((s) => s.lineName === currentLine)}
           selectedSighting={selectedSighting}
+          stations={stations}
+          routeLine={routeLine}
+          lineColor={currentLineData?.color || "#E3000B"}
           onSelectSighting={setSelectedSighting}
           onFlagAtPosition={handleFlagAtPosition}
+          comingSoon={!isAvailable}
         />
       </div>
 
@@ -128,7 +185,12 @@ export default function Home() {
         onClose={() => setFlagModalOpen(false)}
         onSubmit={handleSubmitSighting}
         initialPosition={flagPosition || undefined}
+        currentLine={currentLine}
       />
     </div>
   );
+}
+
+function filteredCount(sightings: MetroSighting[], line: string): number {
+  return sightings.filter((s) => s.lineName === line).length;
 }
