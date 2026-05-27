@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
 import FlagModal from "@/components/FlagModal";
-import { MetroSighting, METRO_LINES, LINE4_STATIONS } from "@/lib/types";
+import { MetroSighting, METRO_LINES, LINE4_STATIONS, LINE4_TRACKS } from "@/lib/types";
 import { MOCK_SIGHTINGS } from "@/lib/store";
 
 const MetroMap = dynamic(() => import("@/components/MetroMap"), {
@@ -33,11 +33,7 @@ export default function Home() {
   const currentLineData = METRO_LINES.find((l) => l.name === currentLine);
   const isAvailable = currentLineData?.available ?? false;
 
-  // Route polyline for Line 4
-  const routeLine: [number, number][] = useMemo(
-    () => LINE4_STATIONS.map((s) => s.position),
-    []
-  );
+  // Route polyline for Line 4 (with road waypoints)
 
   const stations = LINE4_STATIONS; // expand when more lines added
 
@@ -171,7 +167,7 @@ export default function Home() {
           sightings={sightings.filter((s) => s.lineName === currentLine)}
           selectedSighting={selectedSighting}
           stations={stations}
-          routeLine={routeLine}
+          tracks={LINE4_TRACKS}
           lineColor={currentLineData?.color || "#E3000B"}
           onSelectSighting={setSelectedSighting}
           onFlagAtPosition={handleFlagAtPosition}

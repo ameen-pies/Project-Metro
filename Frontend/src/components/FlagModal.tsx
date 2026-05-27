@@ -73,12 +73,12 @@ export default function FlagModal({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000]"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[2000] w-[90vw] max-w-md max-h-[85vh] overflow-y-auto">
         <div className="bg-metro-surface border border-metro-border rounded-3xl p-6 shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between mb-5">

@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
-import L from "leaflet";
-import { MetroSighting, MetroStation, timeAgo, isStale } from "@/lib/types";
+import * as L from "leaflet";
+import { MetroSighting, MetroStation, TrackCollection, timeAgo, isStale } from "@/lib/types";
 
 // Sighting marker (pulsing glow)
 function createSightingIcon(lineColor: string, stale: boolean): L.DivIcon {
@@ -108,11 +108,40 @@ function MapClickHandler({
   return null;
 }
 
+// Renders GeoJSON track collection with per-feature styling
+function TrackRenderer({ tracks }: { tracks: TrackCollection }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const geojson = L.geoJSON(tracks as unknown as GeoJSON.GeoJSON, {
+      style: (feature) => {
+        const props = feature?.properties;
+        const isSplit = props?.name?.includes("Split");
+        return {
+          color: props?.color || "#E53935",
+          weight: isSplit ? 3 : 5,
+          opacity: isSplit ? 0.65 : 0.85,
+          dashArray: isSplit ? "6 8" : undefined,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<b>${feature.properties.name}</b>`);
+      },
+    }).addTo(map);
+
+    return () => {
+      map.removeLayer(geojson);
+    };
+  }, [map, tracks]);
+
+  return null;
+}
+
 interface MetroMapProps {
   sightings: MetroSighting[];
   selectedSighting: MetroSighting | null;
   stations: MetroStation[];
-  routeLine: [number, number][];
+  tracks: TrackCollection;
   lineColor: string;
   onSelectSighting: (sighting: MetroSighting | null) => void;
   onFlagAtPosition: (lat: number, lng: number) => void;
@@ -123,7 +152,7 @@ export default function MetroMap({
   sightings,
   selectedSighting,
   stations,
-  routeLine,
+  tracks,
   lineColor,
   onSelectSighting,
   onFlagAtPosition,
@@ -149,18 +178,8 @@ export default function MetroMap({
         <FlyToSelected sighting={selectedSighting} />
         <MapClickHandler onMapClick={onFlagAtPosition} />
 
-        {/* Route polyline */}
-        {routeLine.length > 1 && (
-          <Polyline
-            positions={routeLine}
-            pathOptions={{
-              color: lineColor,
-              weight: 4,
-              opacity: 0.7,
-              dashArray: "8 4",
-            }}
-          />
-        )}
+        {/* Ground-level rail tracks */}
+        <TrackRenderer tracks={tracks} />
 
         {/* Station markers */}
         {stations.map((station) => (
